@@ -1,18 +1,25 @@
+// src/config/db.js
+import dotenv from "dotenv";
 import pkg from "pg";
+
+dotenv.config(); // garante que o .env foi lido aqui
 
 const { Pool } = pkg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, //necessário para o supabase
+  },
 });
 
-// logs opcionais, só pra você ver que conectou
+// logs pra saber se conectou
 pool.on("connect", () => {
-  console.log("✅ Conectado ao PostgreSQL com sucesso");
+  console.log("Conectado ao Supabase com sucesso");
 });
 
 pool.on("error", (err) => {
-  console.error("❌ Erro na conexão com o PostgreSQL:", err.message);
+  console.error("Sem conexão com o Supabase:", err.message);
 });
 
 export default pool;
