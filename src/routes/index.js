@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authRoutes from "./authRoutes.js";
-import barberRoutes from "./routes/barberRoutes.js";
+import barberRoutes from "./barberRoutes.js";
 import scheduleRoutes from "./scheduleRoutes.js";
 
 const router = Router();
