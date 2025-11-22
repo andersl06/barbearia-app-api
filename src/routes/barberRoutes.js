@@ -15,7 +15,7 @@ router.get("/", listBarbershops);
 // detalhes de uma barbearia
 router.get("/:id", getBarbershopById);
 
-// cadastra barbearia (dono/barber logado)
+// cadastra barbearia
 router.post("/", authMiddleware, createBarbershop);
 
 export default router;

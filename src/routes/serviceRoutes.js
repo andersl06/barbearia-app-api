@@ -1,13 +1,16 @@
 import { Router } from "express";
-import { listservicerBarbershops, createService } from "../controllers/serviceController.js"; 
+import {
+  listServicesByBarbershop,
+  createService,
+} from "../controllers/serviceController.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
-// Get /api/services/barbershop/:barbershop_id - Listar todos os serviços de uma barbearia específica
-router.get("/barbershop/:barbershop_id", listservicerBarbershops);
+// GET /api/services/barbershop/1
+router.get("/barbershop/:barbershop_Id", listServicesByBarbershop);
 
-// Post /api/services/barbershop/:barbershop_id - Criar um novo serviço para uma barbearia específica
-router.post("/barbershop/:barbershop_id", authMiddleware, createService);
+// POST /api/services/barbershop/1
+router.post("/barbershop/:barbershop_Id", authMiddleware, createService);
 
 export default router;
