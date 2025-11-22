@@ -13,7 +13,7 @@ router.post("/login", login);
 router.get("/me", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, email, role, gender, slug, barbershop_id
+      `SELECT id, name, email, role, gender, avatar_url AS "avatarUrl", status
        FROM users
        WHERE id = $1`,
       [req.user.id]
@@ -27,6 +27,30 @@ router.get("/me", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Erro no /me:", error.message);
     return res.status(500).json({ message: "Erro ao buscar usuário" });
+  }
+});
+
+// PATCH /api/auth/status
+router.patch("/status", authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body; // 'active' ou 'inactive'
+
+    if (!["active", "inactive"].includes(status)) {
+      return res.status(400).json({ message: "Status inválido" });
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET status = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [status, req.user.id]
+    );
+
+    return res.json({ message: "Status atualizado com sucesso", status });
+  } catch (error) {
+    console.error("Erro ao atualizar status:", error.message);
+    return res.status(500).json({ message: "Erro ao atualizar status" });
   }
 });
 

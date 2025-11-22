@@ -1,34 +1,21 @@
+// src/routes/barberRoutes.js
 import { Router } from "express";
-
+import {
+  listBarbershops,
+  getBarbershopById,
+  createBarbershop,
+} from "../controllers/barbershopController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
-const barbershops = [
-    {
-    id: 1,
-    name: "Barbearia do Zé",
-    address: "Rua A, 123 - Centro",
-    avgPrice: 35,
-    avgTimeMinutes: 40,
-    }
-]
+// lista todas as barbearias
+router.get("/", listBarbershops);
 
-router.get("/", (req, res) => {
-  return res.json(barbershops);
-});
+// detalhes de uma barbearia
+router.get("/:id", getBarbershopById);
 
-router.get("/:id", (req, res) => {
-  const id = Number(req.params.id);
-
-  const shop = barbershops.find((item) => item.id === id);
-
-  if (!shop) {
-    return res.status(404).json({ message: "Barbearia não encontrada" });
-  }
-
-  return res.json(shop);
-});
+// cadastra barbearia (dono/barber logado)
+router.post("/", authMiddleware, createBarbershop);
 
 export default router;
-
-

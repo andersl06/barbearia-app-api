@@ -7,7 +7,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rotas principais
+// Rotas principais (todas as apis)
 app.use("/api", routes);
+
 
 export default app;

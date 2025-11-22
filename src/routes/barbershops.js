@@ -1,10 +1,7 @@
 // src/routes/barbershopRoutes.js
 import { Router } from "express";
 import pool from "../config/db.js";
-<<<<<<< HEAD
-=======
 import { authMiddleware, requireRole } from "../middlewares/authMiddleware.js";
->>>>>>> 8ed25fe (autenticação feita)
 
 const router = Router();
 
@@ -44,9 +41,4 @@ router.post(
   }
 );
 
-<<<<<<< HEAD
-});
-export default router
-=======
 export default router;
->>>>>>> 8ed25fe (autenticação feita)
