@@ -1,51 +1,19 @@
-// src/middlewares/authMiddleware.js
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 
-// verifica se o usuário está logado
-export const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+export function authMiddleware(req, res, next) {
+  const auth = req.headers.authorization;
 
-  if (!authHeader) {
-    return res.status(401).json({ message: "Token não fornecido" });
-  }
+  if (!auth) return res.status(401).json({ message: "Token não enviado." });
 
-  const [scheme, token] = authHeader.split(" ");
+  const token = auth.replace("Bearer ", "");
 
-  if (scheme !== "Bearer" || !token) {
-    return res.status(401).json({ message: "Formato de token inválido" });
-  }
-
-  if (decoded.forcePasswordChange) {
-    // Só permite rota de trocar senha
-    if (req.path !== "/auth/change-password") {
-      return res.status(403).json({
-        mustChangePassword: true,
-        message: "Troque a senha antes de continuar."
-      });
-    }
-  }
   try {
-    // decodifica e valida o token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // guarda os dados do usuário na requisição (id, role, iat, exp)
+    const decoded = jwt.verify(token, env.JWT_SECRET);
     req.user = decoded;
-    return next();
+    next();
+
   } catch (err) {
-    return res.status(401).json({ message: "Token inválido ou expirado" });
+    return res.status(401).json({ message: "Token inválido." });
   }
-};
-
-// checa se o usuário tem um dos papéis permitidos
-export const requireRole = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Não autenticado" });
-    }
-
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Sem permissão" });
-    }
-
-    return next();
-  };
-};
+}

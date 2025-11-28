@@ -1,31 +1,32 @@
-// src/modules/auth/repo.js
 import supabase from "../../core/db.js";
 
-export const findByEmail = async (email) => {
-  return supabase
+export async function findUserByEmail(email) {
+  const { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("email", email)
     .single();
-};
 
-export const createUser = async (payload) => {
-  return supabase
+  if (error) return null;
+  return data;
+}
+
+export async function createUser(userData) {
+  const { data, error } = await supabase
     .from("users")
-    .insert(payload)
+    .insert([userData])
     .select()
     .single();
-};
 
-export const updatePassword = async (userId, password_hash) => {
-  return supabase
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updateUser(id, fields) {
+  const { error } = await supabase
     .from("users")
-    .update({
-      password_hash,
-      must_change_password: false,
-      updated_at: new Date(),
-    })
-    .eq("id", userId)
-    .select()
-    .single();
-};
+    .update(fields)
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+}

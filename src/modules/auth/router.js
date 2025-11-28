@@ -1,21 +1,26 @@
-// src/modules/auth/router.js
 import { Router } from "express";
-import * as controller from "./controller.js";
+import {
+  registerClient,
+  registerOwner,
+  createBarber,
+  login,
+  changePassword
+} from "./controller.js";
+
+import { authMiddleware } from "../../shared/authMiddleware.js";
 import { authTempMiddleware } from "../../shared/authTempMiddleware.js";
 
 const router = Router();
 
-router.post("/register/client", controller.registerClient);
-router.post("/register/owner", controller.registerOwner);
-router.post("/register/barber", controller.createBarber);
+// Registro
+router.post("/register/client", registerClient);
+router.post("/register/owner", registerOwner);
+router.post("/register/barber", authMiddleware, createBarber);
 
-router.post("/login", controller.login);
+// Login
+router.post("/login", login);
 
-// rota de troca de senha (somente token temporário)
-router.patch(
-  "/change-password",
-  authTempMiddleware, // aceita apenas token type=password_change
-  controller.changePassword
-);
+// Alterar senha temporária
+router.patch("/change-password", authTempMiddleware, changePassword);
 
 export default router;

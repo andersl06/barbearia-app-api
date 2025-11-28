@@ -1,108 +1,94 @@
-import supabase from "../../core/db.js";
-import { hashPassword, signToken } from "../../core/security.js";
-import { AppError } from "../../core/errors.js";
+import bcrypt from "bcryptjs";
+import * as repo from "./repo.js";
+import { generateToken, generateTempToken } from "../../shared/token.js";
+import { env } from "../../config/env.js";
 
-// --------------------------------------------------
 // CLIENTE
-// --------------------------------------------------
-export const registerClient = async ({ name, email, password, phone, cpf, gender }) => {
-  const { data: existing } = await supabase
-    .from("users")
-    .select("id")
-    .or(`email.eq.${email},cpf.eq.${cpf}`)
-    .maybeSingle();
+export async function registerClient(data) {
+  const hashed = await bcrypt.hash(data.password, env.HASH_ROUNDS);
 
-  if (existing) throw new AppError("Email ou CPF já cadastrados", 400);
+  const user = await repo.createUser({
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    cpf: data.cpf,
+    gender: data.gender,
+    role: "client",
+    password_hash: hashed,
+  });
 
-  const password_hash = await hashPassword(password);
+  return { message: "Cliente registrado.", user };
+}
 
-  const { data: user, error } = await supabase
-    .from("users")
-    .insert({
-      name,
-      email,
-      phone,
-      cpf,
-      gender,
-      password_hash,
-      role: "client"
-    })
-    .select()
-    .single();
-
-  if (error) throw new AppError(error.message, 400);
-
-  const token = signToken({ id: user.id, role: user.role });
-
-  return { user, token };
-};
-
-
-// --------------------------------------------------
 // OWNER
-// --------------------------------------------------
-export const registerOwner = async ({ name, email, password, phone, cpf, gender }) => {
-  const { data: exists } = await supabase
-    .from("users")
-    .select("id")
-    .or(`email.eq.${email},cpf.eq.${cpf}`)
-    .maybeSingle();
+export async function registerOwner(data) {
+  const hashed = await bcrypt.hash(data.password, env.HASH_ROUNDS);
 
-  if (exists) throw new AppError("Email ou CPF já cadastrados", 400);
+  const user = await repo.createUser({
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    cpf: data.cpf,
+    gender: data.gender,
+    role: "owner",
+    password_hash: hashed,
+  });
 
-  const password_hash = await hashPassword(password);
+  return { message: "Owner registrado.", user };
+}
 
-  const { data: user, error } = await supabase
-    .from("users")
-    .insert({
-      name,
-      email,
-      phone,
-      cpf,
-      gender,
-      password_hash,
-      role: "owner"
-    })
-    .select()
-    .single();
-
-  if (error) throw new AppError(error.message, 400);
-
-  const token = signToken({ id: user.id, role: user.role });
-
-  return { user, token };
-};
-
-
-// --------------------------------------------------
-// BARBER (criado pelo owner)
-// --------------------------------------------------
-export const createBarber = async ({ ownerId, name, email, phone, cpf, gender }) => {
-  // regra: dono só cria barbeiro da própria barbearia (validamos depois)
-
+// BARBER (senha temporária)
+export async function createBarber({ ownerId, name, email, phone, cpf, gender }) {
   const tempPassword = Math.random().toString(36).slice(-8);
-  const password_hash = await hashPassword(tempPassword);
+  const hashed = await bcrypt.hash(tempPassword, env.HASH_ROUNDS);
 
-  const { data: user, error } = await supabase
-    .from("users")
-    .insert({
-      name,
-      email,
-      phone,
-      cpf,
-      gender,
-      password_hash,
-      role: "barber",
-      must_change_password: true
-    })
-    .select()
-    .single();
-
-  if (error) throw new AppError(error.message, 400);
+  const user = await repo.createUser({
+    name,
+    email,
+    phone,
+    cpf,
+    gender,
+    role: "barber",
+    password_hash: hashed,
+    must_change_password: true,
+  });
 
   return {
-    message: "Barber criado com sucesso. Ele deve trocar a senha no primeiro login.",
+    message: "Barbeiro criado.",
     user,
-    tempPassword
+    tempPassword,
   };
-};
+}
+
+// LOGIN
+export async function login({ email, password }) {
+  const user = await repo.findUserByEmail(email);
+  if (!user) throw new Error("Email não encontrado.");
+
+  const valid = await bcrypt.compare(password, user.password_hash);
+  if (!valid) throw new Error("Senha incorreta.");
+
+  if (user.must_change_password) {
+    return {
+      token: generateTempToken(user),
+      must_change_password: true,
+    };
+  }
+
+  return {
+    token: generateToken(user),
+    user,
+  };
+}
+
+// Troca de senha
+export async function changePassword({ userId, newPassword }) {
+  const hashed = await bcrypt.hash(newPassword, env.HASH_ROUNDS);
+
+  await repo.updateUser(userId, {
+    password_hash: hashed,
+    must_change_password: false,
+  });
+
+  return { message: "Senha alterada com sucesso." };
+}
