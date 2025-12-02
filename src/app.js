@@ -4,10 +4,14 @@ import router from "./routes/index.js";
 
 const app = express();
 
-app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:8080", "http://localhost:5173"],
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
