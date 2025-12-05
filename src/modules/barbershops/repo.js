@@ -1,38 +1,48 @@
-// src/modules/barbershops/repo.js
 import supabase from "../../core/db.js";
 
-export const create = async (payload) => {
-  return supabase
-    .from("barbershops")
-    .insert(payload)
-    .select()
-    .single();
-};
+export const barbershopsRepo = {
+  // Buscar barbearia do owner
+  findByOwnerId: async (ownerId) => {
+    const { data, error } = await supabase
+      .from("barbershops")
+      .select("*")
+      .eq("owner_id", ownerId)
+      .maybeSingle(); // evita erro quando não existe
 
-export const update = async (id, payload) => {
-  return supabase
-    .from("barbershops")
-    .update({
-      ...payload,
-      updated_at: new Date()
-    })
-    .eq("id", id)
-    .select()
-    .single();
-};
+    return { data, error };
+  },
 
-export const findById = async (id) => {
-  return supabase
-    .from("barbershops")
-    .select("*")
-    .eq("id", id)
-    .single();
-};
+  // Buscar por ID
+  findById: async (id) => {
+    const { data, error } = await supabase
+      .from("barbershops")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
 
-export const findBySlug = async (slug) => {
-  return supabase
-    .from("barbershops")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    return { data, error };
+  },
+
+  // Criar barbearia
+  create: async (payload) => {
+    const { data, error } = await supabase
+      .from("barbershops")
+      .insert(payload)
+      .select()
+      .single();
+
+    return { data, error };
+  },
+
+  // Atualizar barbearia
+  update: async (id, payload) => {
+    const { data, error } = await supabase
+      .from("barbershops")
+      .update(payload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    return { data, error };
+  }
 };

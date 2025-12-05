@@ -1,78 +1,35 @@
 // src/modules/barbershops/service.js
-import * as repo from "./repo.js";
+import { barbershopsRepo } from "./repo.js";
 
-const generateSlug = (name) => {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-};
+export const barbershopsService = {
+  getMine: async (ownerId) => {
+    const shop = await barbershopsRepo.findByOwnerId(ownerId);
 
-export const createBarbershop = async (ownerId, data) => {
-  // FUTURO: permitir várias unidades por owner
-  // MVP: apenas 1 barbearia por owner
-  // (se quiser, posso ativar isso depois)
-  
-  const slug = generateSlug(data.name);
+    if (!shop) return null;
+    return shop;
+  },
 
-  const payload = {
-    owner_id: ownerId,
-    name: data.name,
-    slug,
-    description: data.description || null,
-    phone: data.phone || null,
-    address: data.address || null,
-    cnpj: data.cnpj || null,
-    cpf: data.cpf || null,
-    city: data.city || null,
-    state: data.state || null,
-    zipcode: data.zipcode || null,
-    address_number: data.address_number || null,
-    address_complement: data.address_complement || null,
-    neighborhood: data.neighborhood || null,
-    facilities: data.facilities || [],
-    payment_methods: data.payment_methods || [],
-    opening_hours: data.opening_hours || {},
-    social_links: data.social_links || {},
-    cover_url: data.cover_url || null,
-    logo_url: data.logo_url || null,
-  };
+  getOne: async (id) => {
+    const shop = await barbershopsRepo.findById(id);
 
-  const { data: shop, error } = await repo.create(payload);
-  if (error) throw error;
+    if (!shop) throw new Error("Barbearia não encontrada");
+    return shop;
+  },
 
-  return shop;
-};
+  create: async (ownerId, payload) => {
+    const newData = {
+      ...payload,
+      owner_id: ownerId,
+    };
 
-export const updateBarbershop = async (ownerId, shopId, updates) => {
-  // impedir que alguém atualize a barbearia de outro owner
-  const { data: shop, error } = await repo.findById(shopId);
-  if (error || !shop) throw new Error("Barbearia não encontrada");
+    const shop = await barbershopsRepo.create(newData);
+    return shop;
+  },
 
-  if (shop.owner_id !== ownerId) {
-    throw new Error("Acesso negado à barbearia");
+  update: async (id, payload) => {
+    const shop = await barbershopsRepo.update(id, payload);
+
+    if (!shop) throw new Error("Erro ao atualizar barbearia");
+    return shop;
   }
-
-  if (updates.name) {
-    updates.slug = generateSlug(updates.name);
-  }
-
-  const { data: updated, error: updateError } = await repo.update(shopId, updates);
-  if (updateError) throw updateError;
-
-  return updated;
-};
-
-export const getBarbershopById = async (id) => {
-  const { data, error } = await repo.findById(id);
-  if (error || !data) throw new Error("Barbearia não encontrada");
-  return data;
-};
-
-export const getBySlug = async (slug) => {
-  const { data, error } = await repo.findBySlug(slug);
-  if (error || !data) throw new Error("Barbearia não encontrada");
-  return data;
 };

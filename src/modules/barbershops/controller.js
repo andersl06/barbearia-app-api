@@ -1,42 +1,45 @@
-// src/modules/barbershops/controller.js
-import * as service from "./service.js";
+import { barbershopsService } from "./service.js";
 
-export const create = async (req, res, next) => {
+export const getMine = async (req, res) => {
   try {
-    const ownerId = req.user.id;
-    const shop = await service.createBarbershop(ownerId, req.body);
-    res.status(201).json(shop);
+    const shop = await barbershopsService.getMine(req.user.id);
+    if (!shop) return res.status(404).json({ message: "Owner não possui barbearia" });
+
+    return res.json(shop);
+
   } catch (err) {
-    next(err);
+    console.error("ERROR:", err);
+    return res.status(500).json({ message: err.message });
   }
 };
 
-export const update = async (req, res, next) => {
+export const getOne = async (req, res) => {
   try {
-    const ownerId = req.user.id;
-    const shopId = parseInt(req.params.id);
+    const shop = await barbershopsService.getOne(req.params.id);
+    return res.json(shop);
 
-    const shop = await service.updateBarbershop(ownerId, shopId, req.body);
-    res.json(shop);
   } catch (err) {
-    next(err);
+    return res.status(404).json({ message: err.message });
   }
 };
 
-export const getOne = async (req, res, next) => {
+export const create = async (req, res) => {
   try {
-    const shop = await service.getBarbershopById(req.params.id);
-    res.json(shop);
+    const shop = await barbershopsService.create(req.user.id, req.body);
+    return res.status(201).json(shop);
+
   } catch (err) {
-    next(err);
+    console.error("ERROR:", err);
+    return res.status(400).json({ message: err.message });
   }
 };
 
-export const getBySlug = async (req, res, next) => {
+export const update = async (req, res) => {
   try {
-    const shop = await service.getBySlug(req.params.slug);
-    res.json(shop);
+    const shop = await barbershopsService.update(req.params.id, req.body);
+    return res.json(shop);
+
   } catch (err) {
-    next(err);
+    return res.status(400).json({ message: err.message });
   }
 };

@@ -1,23 +1,37 @@
-import pool from "../config/db.js";
+import supabase from "../core/db.js";
 
-// Middleware para verificar se o usuário é proprietário da barbearia
+// Verificar se o usuário é proprietário da barbearia
 export const isOwnerOfBarbershop = async (req, res, next) => {
   try {
     const userId = Number(req.user?.id);
-    const barbershopId = Number(req.params.barbershopId || req.body.barbershopId);
-
-    if (!userId || !barbershopId) {
-      return res.status(400).json({ message: "ownerId ou barbershopId ausente" });
-    }
-
-    const result = await pool.query(
-      `SELECT 1 FROM barbershop_barbers
-       WHERE barbershop_id = $1 AND user_id = $2 AND is_owner = true AND is_active = true`,
-      [barbershopId, userId]
+    const barbershopId = Number(
+      req.params.barbershopId || req.body.barbershopId
     );
 
-    if (result.rows.length === 0) {
-      return res.status(403).json({ message: "Ação permitida somente para o proprietário" });
+    if (!userId || !barbershopId) {
+      return res.status(400).json({
+        message: "ownerId ou barbershopId ausente",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("barbershop_barbers")
+      .select("id")
+      .eq("barbershop_id", barbershopId)
+      .eq("user_id", userId)
+      .eq("is_owner", true)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Supabase error:", error.message);
+      return res.status(500).json({ message: "Erro interno de autorização" });
+    }
+
+    if (!data) {
+      return res.status(403).json({
+        message: "Ação permitida somente para o proprietário",
+      });
     }
 
     next();
@@ -27,24 +41,40 @@ export const isOwnerOfBarbershop = async (req, res, next) => {
   }
 };
 
-// Middleware para verificar se o usuário é proprietário da barbearia
+
+// Verificar se o usuário é barbeiro da barbearia
 export const isBarberOfBarbershop = async (req, res, next) => {
   try {
     const userId = Number(req.user?.id);
-    const barbershopId = Number(req.params.barbershopId || req.body.barbershopId || req.query.barbershopId);
-
-    if (!userId || !barbershopId) {
-      return res.status(400).json({ message: "barberId ou barbershopId ausente" });
-    }
-
-    const result = await pool.query(
-      `SELECT 1 FROM barbershop_barbers
-       WHERE barbershop_id = $1 AND user_id = $2 AND is_active = true`,
-      [barbershopId, userId]
+    const barbershopId = Number(
+      req.params.barbershopId ||
+        req.body.barbershopId ||
+        req.query.barbershopId
     );
 
-    if (result.rows.length === 0) {
-      return res.status(403).json({ message: "Ação permitida somente para barbeiros vinculados" });
+    if (!userId || !barbershopId) {
+      return res.status(400).json({
+        message: "barberId ou barbershopId ausente",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("barbershop_barbers")
+      .select("id")
+      .eq("barbershop_id", barbershopId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Supabase error:", error.message);
+      return res.status(500).json({ message: "Erro interno de autorização" });
+    }
+
+    if (!data) {
+      return res.status(403).json({
+        message: "Ação permitida somente para barbeiros vinculados",
+      });
     }
 
     next();
