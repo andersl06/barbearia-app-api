@@ -1,50 +1,62 @@
 // src/modules/barbers/controller.js
 import * as service from "./service.js";
 
-export const create = async (req, res, next) => {
+export async function create(req, res, next) {
   try {
-    const ownerUser = req.user;
-    const barbershopId = parseInt(req.params.barbershopId);
-    const payload = req.body;
+    const barbershopId = Number(req.params.barbershopId);
+    const payload = req.body; // Renomeado para 'payload' para clareza e consistência
 
-    const result = await service.createBarberInBarbershop(ownerUser, barbershopId, payload);
-    res.status(201).json(result);
+    // Validação de campos obrigatórios, INCLUINDO A SENHA
+    const user = payload.user;
+    if (!user || !user.name || !user.email || !user.phone || !user.cpf || !user.gender || !user.password) {
+      return res.status(400).json({ message: "Todos os campos obrigatórios do usuário, incluindo a senha, devem ser fornecidos." });
+    }
+
+    const result = await service.create(barbershopId, payload);
+    // Usar 201 Created para criação bem-sucedida
+    res.status(201).json(result); 
   } catch (err) {
     next(err);
   }
-};
+}
 
-export const list = async (req, res, next) => {
+export async function list(req, res, next) {
   try {
-    const barbershopId = parseInt(req.params.barbershopId);
-    const list = await service.listBarbersOfBarbershop(barbershopId);
-    res.json(list);
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const patch = async (req, res, next) => {
-  try {
-    const ownerUser = req.user;
-    const barbershopId = parseInt(req.params.barbershopId);
-    const userId = parseInt(req.params.userId);
-    const updates = req.body;
-    const result = await service.updateBarber(ownerUser.id, barbershopId, userId, updates);
+    const barbershopId = Number(req.params.barbershopId);
+    const result = await service.list(barbershopId);
     res.json(result);
   } catch (err) {
     next(err);
   }
-};
+}
 
-export const linkOwner = async (req, res, next) => {
+export async function patch(req, res, next) {
   try {
-    const ownerUser = req.user;
-    const barbershopId = parseInt(req.params.barbershopId);
-    const payload = req.body || {};
-    const result = await service.linkOwnerAsBarber(ownerUser, barbershopId, payload);
-    res.status(200).json(result);
+    const barbershopId = Number(req.params.barbershopId);
+    const userId = Number(req.params.userId);
+    const updates = req.body;
+
+    const result = await service.patch(barbershopId, userId, updates);
+    res.json(result);
   } catch (err) {
     next(err);
   }
-};
+}
+
+export async function linkOwner(req, res, next) {
+  try {
+    const barbershopId = Number(req.params.barbershopId);
+    const ownerUser = req.user; // veio do authMiddleware
+    const payload = req.body || {};
+
+    const result = await service.linkOwnerAsBarber(
+      barbershopId,
+      ownerUser.id,
+      payload
+    );
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}

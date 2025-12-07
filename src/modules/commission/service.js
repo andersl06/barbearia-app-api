@@ -1,94 +1,95 @@
-// src/modules/commission/service.js
-import * as repo from "./repo.js";
+import supabase from "../../core/db.js";
+import dayjs from "dayjs";
 
 /**
- * Calcula comissão de serviço.
+ * Calcula comissão padrão sobre o preço do serviço
  */
-export const calcCommission = (service_price) => {
-  const commission_percent = 5;
-  const commission_value = Number((service_price * 0.05).toFixed(2));
-  return { commission_percent, commission_value };
-};
-
-/**
- * Chamado AUTOMATICAMENTE no momento da criação do agendamento.
- */
-export const registerBookingCommission = async (booking, service_price) => {
-  const { commission_percent, commission_value } = calcCommission(service_price);
-
-  // salvar transação
-  await repo.createTransaction({
-    schedule_id: booking.id,
-    barbershop_id: booking.barbershop_id,
-    service_price,
-    commission_percent,
-    commission_value,
-    paid_online: false
-  });
-
-  // atualizar usage_metrics para isenção futura
-  const month = booking.starts_at.substring(0, 7); // YYYY-MM
-
-  const { data: usage } = await repo.countMonthlyBookings(
-    booking.barbershop_id,
-    month
-  );
-
-  const newCount = usage ? usage.appointments + 1 : 1;
-
-  await repo.upsertUsage({
-    barbershop_id: booking.barbershop_id,
-    month,
-    appointments: newCount,
-    commission_rate: 5
-  });
-
-  return { commission_percent, commission_value };
-};
-
-/**
- * Gera invoice mensal completo (com ou sem isenção).
- */
-export const generateMonthlyInvoice = async (barbershopId, month) => {
-  const { data: usage } = await repo.countMonthlyBookings(barbershopId, month);
-  const appointments = usage ? usage.appointments : 0;
-
-  const isExempt = appointments >= 140;
-
-  const { data: transactions } = await repo.listTransactionsForMonth(
-    barbershopId,
-    month
-  );
-
-  const totalCommission = transactions
-    ? transactions.reduce((sum, t) => sum + Number(t.commission_value), 0)
-    : 0;
-
-  const finalValue = isExempt ? 0 : totalCommission;
-
-  const invoice = await repo.createInvoice({
-    barbershop_id: barbershopId,
-    month,
-    total_commission: finalValue,
-    discount_applied: isExempt,
-    discount_reason: isExempt ? "Isenção por 140+ agendamentos" : null,
-    status: "pending"
-  });
-
-  return invoice.data;
-};
-
-/**
- * Exibe valor para o cliente no checkout.
- */
-export const previewForClient = (service_price) => {
-  const { commission_percent, commission_value } = calcCommission(service_price);
-  const total = Number(service_price + commission_value).toFixed(2);
+export function calculateCommission(servicePrice) {
+  const percent = 10; // Exemplo: 10%
+  const value = Number((servicePrice * (percent / 100)).toFixed(2));
 
   return {
-    service_price,
-    app_fee: commission_value,
-    percent: commission_percent,
-    total_price: Number(total)
+    percent,
+    commission_value: value,
   };
-};
+}
+
+/**
+ * Registrar uma transação (um corte realizado)
+ */
+export async function registerTransaction({ schedule_id, barbershop_id, service_price, paid_online }) {
+  const { percent, commission_value } = calculateCommission(service_price);
+
+  return supabase
+    .from("billing_transactions")
+    .insert({
+      schedule_id,
+      barbershop_id,
+      service_price,
+      commission_percent: percent,
+      commission_value,
+      paid_online: paid_online ?? false,
+    })
+    .select()
+    .single();
+}
+
+/**
+ * Gera ou atualiza uma fatura do mês
+ */
+export async function generateInvoice(barbershopId, month) {
+  const targetMonth = month || dayjs().format("YYYY-MM");
+
+  // Buscar transações do mês
+  const { data: transactions } = await supabase
+    .from("billing_transactions")
+    .select("*")
+    .eq("barbershop_id", barbershopId)
+    .gte("created_at", `${targetMonth}-01`)
+    .lte("created_at", `${targetMonth}-31`);
+
+  const total = (transactions || [])
+    .reduce((acc, t) => acc + Number(t.commission_value), 0);
+
+  // Upsert da fatura
+  const { data: invoice } = await supabase
+    .from("billing_invoices")
+    .upsert(
+      {
+        barbershop_id: barbershopId,
+        month: targetMonth,
+        total_commission: total,
+        status: "pending",
+      },
+      { onConflict: "barbershop_id,month" }
+    )
+    .select()
+    .single();
+
+  // Registrar métricas
+  await supabase.from("usage_metrics").upsert(
+    {
+      barbershop_id: barbershopId,
+      month: targetMonth,
+      appointments: transactions.length,
+      commission_rate: 10,
+    },
+    { onConflict: "barbershop_id,month" }
+  );
+
+  return invoice;
+}
+
+/**
+ * Ver invoice atual
+ */
+export async function getInvoice(barbershopId, month) {
+  const targetMonth = month || dayjs().format("YYYY-MM");
+  return supabase
+    .from("billing_invoices")
+    .select("*")
+    .eq("barbershop_id", barbershopId)
+    .eq("month", targetMonth)
+    .maybeSingle();
+}
+

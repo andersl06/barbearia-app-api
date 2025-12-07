@@ -13,7 +13,7 @@ export const authTempMiddleware = (req, res, next) => {
       return res.status(403).json({ error: "Token inválido" });
     }
 
-    req.user = { id: decoded.sub };
+    req.user = { id: decoded.id };
     next();
   } catch (err) {
     return res.status(401).json({ error: "Token inválido ou expirado" });
